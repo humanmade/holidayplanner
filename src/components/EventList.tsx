@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { CalendarEvent } from '../types';
+import { EventTooltip } from './EventTooltip';
 
 interface Props {
 	events: CalendarEvent[];
@@ -37,7 +38,7 @@ export function EventList({ events, removeEvent }: Props) {
 				{filteredEvents.map((event) => (
 					<span
 						key={event.id}
-						className={`inline-flex items-center gap-1 px-2 py-1 text-xs rounded-md ${
+						className={`relative group/tip inline-flex items-center gap-1 px-2 py-1 text-xs rounded-md ${
 							event.type === 'public'
 								? 'bg-green-100 text-green-800'
 								: event.type === 'school'
@@ -55,6 +56,7 @@ export function EventList({ events, removeEvent }: Props) {
 								&times;
 							</button>
 						)}
+						<EventTooltip events={[event]} position="below" />
 					</span>
 				))}
 			</div>
