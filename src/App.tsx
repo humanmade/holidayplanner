@@ -4,6 +4,7 @@ import { useEvents } from './hooks/useEvents';
 import { usePublicHolidays } from './hooks/usePublicHolidays';
 import { SettingsBar } from './components/SettingsBar';
 import { YearCalendar } from './components/YearCalendar';
+import { EventList } from './components/EventList';
 import { EventSummary } from './components/EventSummary';
 import { ExportMenu } from './components/ExportMenu';
 import type { CalendarEvent } from './types';
@@ -43,11 +44,6 @@ function App() {
     [addEvent]
   );
 
-  const sortedDisplayEvents = useMemo(
-    () => allEvents.slice().sort((a, b) => a.startDate.localeCompare(b.startDate)),
-    [allEvents]
-  );
-
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
@@ -73,36 +69,7 @@ function App() {
           <p className="text-sm text-gray-500">Loading holidays...</p>
         )}
 
-        {sortedDisplayEvents.length > 0 && (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-            <h2 className="text-sm font-semibold text-gray-700 mb-2">Events</h2>
-            <div className="flex flex-wrap gap-2">
-              {sortedDisplayEvents.map((event) => (
-                <span
-                  key={event.id}
-                  className={`inline-flex items-center gap-1 px-2 py-1 text-xs rounded-md ${
-                    event.type === 'public'
-                      ? 'bg-green-100 text-green-800'
-                      : event.type === 'school'
-                        ? 'bg-purple-100 text-purple-800'
-                        : 'bg-blue-100 text-blue-800'
-                  }`}
-                >
-                  {event.title}: {event.startDate} to {event.endDate}
-                  {event.type !== 'public' && event.type !== 'school' && (
-                    <button
-                      onClick={() => removeEvent(event.id)}
-                      className="ml-1 text-blue-500 hover:text-blue-700"
-                      aria-label={`Remove ${event.title}`}
-                    >
-                      &times;
-                    </button>
-                  )}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
+        <EventList events={allEvents} removeEvent={removeEvent} />
 
         <YearCalendar
           yearStartMonth={settings.yearStartMonth}
