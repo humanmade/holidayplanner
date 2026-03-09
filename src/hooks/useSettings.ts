@@ -24,6 +24,8 @@ function loadSettings(): AppSettings {
   return defaultSettings;
 }
 
+const isFirstVisit = !localStorage.getItem(STORAGE_KEY);
+
 export function useSettings() {
   const [settings, setSettings] = useState<AppSettings>(loadSettings);
 
@@ -35,5 +37,5 @@ export function useSettings() {
     setSettings((prev) => ({ ...prev, ...updates }));
   };
 
-  return { settings, updateSettings };
+  return { settings, updateSettings, isFirstVisit };
 }

@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useSettings } from './hooks/useSettings';
 import { useEvents } from './hooks/useEvents';
 import { usePublicHolidays } from './hooks/usePublicHolidays';
+import { HelpSection } from './components/HelpSection';
 import { SettingsBar } from './components/SettingsBar';
 import { YearCalendar } from './components/YearCalendar';
 import { EventList } from './components/EventList';
@@ -10,9 +11,10 @@ import { ExportMenu } from './components/ExportMenu';
 import type { CalendarEvent } from './types';
 
 function App() {
-  const { settings, updateSettings } = useSettings();
+  const { settings, updateSettings, isFirstVisit } = useSettings();
   const { events, addEvent, removeEvent } = useEvents();
-  const [ showSettings, setShowSettings ] = useState(false);
+  const [showSettings, setShowSettings] = useState(isFirstVisit);
+  const [showHelp, setShowHelp] = useState(isFirstVisit);
 
   const { publicHolidays, loading: holidaysLoading } = usePublicHolidays(
     settings.countryCode,
@@ -56,9 +58,19 @@ function App() {
             >
               Settings
             </button>
+            <button
+              onClick={() => setShowHelp(!showHelp)}
+              className="px-3 py-1.5 text-sm bg-white/40 border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              Help
+            </button>
           </div>
           <ExportMenu events={allEvents} />
         </div>
+
+        {showHelp && (
+          <HelpSection onDismiss={() => setShowHelp(false)} />
+        )}
 
         {showSettings && (
           <SettingsBar settings={settings} onUpdate={updateSettings} />
