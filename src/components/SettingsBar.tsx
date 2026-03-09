@@ -1,22 +1,34 @@
 import { useState, useEffect } from 'react';
-import type { AppSettings } from '../types';
+import type { AppSettings, HolidaySource } from '../types';
 import { getMonthName } from '../utils/dates';
 
-const API_BASE = 'https://openholidaysapi.org';
+const OPEN_HOLIDAYS_BASE = 'https://openholidaysapi.org';
+const NAGER_BASE = 'https://date.nager.at/api/v3';
 
 interface ApiName {
   language: string;
   text: string;
 }
 
-interface Country {
+interface OpenHolidaysCountry {
   isoCode: string;
   name: ApiName[];
+}
+
+interface NagerCountry {
+  countryCode: string;
+  name: string;
 }
 
 interface Subdivision {
   code: string;
   name: ApiName[];
+}
+
+interface CountryEntry {
+  code: string;
+  name: string;
+  source: HolidaySource;
 }
 
 function getEnglishName(names: ApiName[]): string {
@@ -29,27 +41,42 @@ interface SettingsBarProps {
 }
 
 export function SettingsBar({ settings, onUpdate }: SettingsBarProps) {
-  const [countries, setCountries] = useState<{ code: string; name: string }[]>([]);
+  const [countries, setCountries] = useState<CountryEntry[]>([]);
   const [subdivisions, setSubdivisions] = useState<{ code: string; name: string }[]>([]);
   const [loadingCountries, setLoadingCountries] = useState(false);
   const [loadingSubdivisions, setLoadingSubdivisions] = useState(false);
 
-  // Fetch countries on mount
+  // Fetch and merge country lists from both APIs
   useEffect(() => {
     let cancelled = false;
     setLoadingCountries(true);
 
-    fetch(`${API_BASE}/Countries`)
+    const openHolidaysPromise = fetch(`${OPEN_HOLIDAYS_BASE}/Countries`)
       .then((res) => res.json())
-      .then((data: Country[]) => {
+      .then((data: OpenHolidaysCountry[]) =>
+        data.map((c) => ({ code: c.isoCode, name: getEnglishName(c.name), source: 'openholidays' as const }))
+      )
+      .catch(() => [] as CountryEntry[]);
+
+    const nagerPromise = fetch(`${NAGER_BASE}/AvailableCountries`)
+      .then((res) => res.json())
+      .then((data: NagerCountry[]) =>
+        data.map((c) => ({ code: c.countryCode, name: c.name, source: 'nager' as const }))
+      )
+      .catch(() => [] as CountryEntry[]);
+
+    Promise.all([openHolidaysPromise, nagerPromise])
+      .then(([openCountries, nagerCountries]) => {
         if (cancelled) return;
-        const sorted = data
-          .map((c) => ({ code: c.isoCode, name: getEnglishName(c.name) }))
-          .sort((a, b) => a.name.localeCompare(b.name));
-        setCountries(sorted);
-      })
-      .catch(() => {
-        // silently fail — dropdown will just be empty
+
+        // OpenHolidays takes priority — only add Nager countries not already covered
+        const openCodes = new Set(openCountries.map((c) => c.code));
+        const merged = [
+          ...openCountries,
+          ...nagerCountries.filter((c) => !openCodes.has(c.code)),
+        ];
+        merged.sort((a, b) => a.name.localeCompare(b.name));
+        setCountries(merged);
       })
       .finally(() => {
         if (!cancelled) setLoadingCountries(false);
@@ -58,16 +85,16 @@ export function SettingsBar({ settings, onUpdate }: SettingsBarProps) {
     return () => { cancelled = true; };
   }, []);
 
-  // Fetch subdivisions when country changes
+  // Fetch subdivisions when country changes (OpenHolidays only)
   useEffect(() => {
     setSubdivisions([]);
 
-    if (!settings.countryCode) return;
+    if (!settings.countryCode || settings.countrySource !== 'openholidays') return;
 
     let cancelled = false;
     setLoadingSubdivisions(true);
 
-    fetch(`${API_BASE}/Subdivisions?countryIsoCode=${settings.countryCode}`)
+    fetch(`${OPEN_HOLIDAYS_BASE}/Subdivisions?countryIsoCode=${settings.countryCode}`)
       .then((res) => res.json())
       .then((data: Subdivision[]) => {
         if (cancelled) return;
@@ -84,7 +111,16 @@ export function SettingsBar({ settings, onUpdate }: SettingsBarProps) {
       });
 
     return () => { cancelled = true; };
-  }, [settings.countryCode]);
+  }, [settings.countryCode, settings.countrySource]);
+
+  const handleCountryChange = (code: string) => {
+    const country = countries.find((c) => c.code === code);
+    onUpdate({
+      countryCode: code,
+      subdivisionCode: '',
+      countrySource: country?.source ?? '',
+    });
+  };
 
   return (
     <div className="flex flex-wrap items-center gap-4 p-4 bg-white rounded-lg shadow-sm border border-gray-200">
@@ -144,7 +180,7 @@ export function SettingsBar({ settings, onUpdate }: SettingsBarProps) {
         <select
           id="country"
           value={settings.countryCode}
-          onChange={(e) => onUpdate({ countryCode: e.target.value, subdivisionCode: '' })}
+          onChange={(e) => handleCountryChange(e.target.value)}
           disabled={loadingCountries}
           className="px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
         >

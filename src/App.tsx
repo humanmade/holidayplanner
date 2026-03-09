@@ -17,7 +17,8 @@ function App() {
     settings.countryCode,
     settings.subdivisionCode,
     settings.year,
-    settings.yearStartMonth
+    settings.yearStartMonth,
+    settings.countrySource
   );
 
   const allEvents = useMemo(

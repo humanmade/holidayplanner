@@ -9,6 +9,7 @@ const defaultSettings: AppSettings = {
   year: new Date().getFullYear(),
   countryCode: '',
   subdivisionCode: '',
+  countrySource: '',
 };
 
 function loadSettings(): AppSettings {
