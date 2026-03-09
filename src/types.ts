@@ -1,4 +1,4 @@
-export type EventType = 'holiday' | 'company' | 'public';
+export type EventType = 'holiday' | 'company' | 'public' | 'school';
 
 export interface CalendarEvent {
   id: string;
@@ -12,4 +12,6 @@ export interface AppSettings {
   totalDays: number;      // default 35
   yearStartMonth: number; // 0-11, default 3 (April)
   year: number;
+  countryCode: string;      // ISO country code for public holidays ('' = none)
+  subdivisionCode: string;  // subdivision code for regional holidays ('' = national only)
 }

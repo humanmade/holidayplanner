@@ -1,6 +1,7 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useSettings } from './hooks/useSettings';
 import { useEvents } from './hooks/useEvents';
+import { usePublicHolidays } from './hooks/usePublicHolidays';
 import { SettingsBar } from './components/SettingsBar';
 import { YearCalendar } from './components/YearCalendar';
 import { EventSummary } from './components/EventSummary';
@@ -11,6 +12,18 @@ function App() {
   const { settings, updateSettings } = useSettings();
   const { events, addEvent, removeEvent } = useEvents();
   const [ showSettings, setShowSettings ] = useState(false);
+
+  const { publicHolidays, loading: holidaysLoading } = usePublicHolidays(
+    settings.countryCode,
+    settings.subdivisionCode,
+    settings.year,
+    settings.yearStartMonth
+  );
+
+  const allEvents = useMemo(
+    () => [...events, ...publicHolidays],
+    [events, publicHolidays]
+  );
 
   const handleCreateEvent = useCallback(
     (startDate: string, endDate: string) => {
@@ -29,6 +42,11 @@ function App() {
     [addEvent]
   );
 
+  const sortedDisplayEvents = useMemo(
+    () => allEvents.slice().sort((a, b) => a.startDate.localeCompare(b.startDate)),
+    [allEvents]
+  );
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
@@ -42,7 +60,7 @@ function App() {
               Settings
             </button>
           </div>
-          <ExportMenu events={events} />
+          <ExportMenu events={allEvents} />
         </div>
 
         {showSettings && (
@@ -50,19 +68,27 @@ function App() {
         )}
         <EventSummary events={events} totalDays={settings.totalDays} />
 
-        {events.length > 0 && (
+        {holidaysLoading && (
+          <p className="text-sm text-gray-500">Loading holidays...</p>
+        )}
+
+        {sortedDisplayEvents.length > 0 && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
             <h2 className="text-sm font-semibold text-gray-700 mb-2">Events</h2>
             <div className="flex flex-wrap gap-2">
-              {events
-                .slice()
-                .sort((a, b) => a.startDate.localeCompare(b.startDate))
-                .map((event) => (
-                  <span
-                    key={event.id}
-                    className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded-md bg-blue-100 text-blue-800"
-                  >
-                    {event.title}: {event.startDate} to {event.endDate}
+              {sortedDisplayEvents.map((event) => (
+                <span
+                  key={event.id}
+                  className={`inline-flex items-center gap-1 px-2 py-1 text-xs rounded-md ${
+                    event.type === 'public'
+                      ? 'bg-green-100 text-green-800'
+                      : event.type === 'school'
+                        ? 'bg-purple-100 text-purple-800'
+                        : 'bg-blue-100 text-blue-800'
+                  }`}
+                >
+                  {event.title}: {event.startDate} to {event.endDate}
+                  {event.type !== 'public' && event.type !== 'school' && (
                     <button
                       onClick={() => removeEvent(event.id)}
                       className="ml-1 text-blue-500 hover:text-blue-700"
@@ -70,8 +96,9 @@ function App() {
                     >
                       &times;
                     </button>
-                  </span>
-                ))}
+                  )}
+                </span>
+              ))}
             </div>
           </div>
         )}
@@ -79,7 +106,7 @@ function App() {
         <YearCalendar
           yearStartMonth={settings.yearStartMonth}
           year={settings.year}
-          events={events}
+          events={allEvents}
           onCreateEvent={handleCreateEvent}
         />
       </div>

@@ -7,6 +7,8 @@ const defaultSettings: AppSettings = {
   totalDays: 35,
   yearStartMonth: 3, // April
   year: new Date().getFullYear(),
+  countryCode: '',
+  subdivisionCode: '',
 };
 
 function loadSettings(): AppSettings {

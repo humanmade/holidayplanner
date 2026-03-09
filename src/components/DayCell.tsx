@@ -16,6 +16,7 @@ const eventColors: Record<EventType, string> = {
   holiday: 'bg-blue-200 text-blue-900',
   company: 'bg-amber-200 text-amber-900',
   public: 'bg-green-200 text-green-900',
+  school: 'bg-purple-200 text-purple-900',
 };
 
 export function DayCell({
