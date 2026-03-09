@@ -30,12 +30,17 @@ export function MonthGrid({
   const daysInMonth = getDaysInMonth(year, month);
   const firstDayOffset = getFirstDayOfWeek(year, month);
 
-  // Build a map of date -> event for this month
-  const dateEventMap = new Map<string, CalendarEvent>();
+  // Build a map of date -> events for this month
+  const dateEventMap = new Map<string, CalendarEvent[]>();
   for (const event of events) {
     const days = eachDayInRange(event.startDate, event.endDate);
     for (const day of days) {
-      dateEventMap.set(day, event);
+      const existing = dateEventMap.get(day);
+      if (existing) {
+        existing.push(event);
+      } else {
+        dateEventMap.set(day, [event]);
+      }
     }
   }
 
@@ -56,7 +61,7 @@ export function MonthGrid({
         day={day}
         month={month}
         year={year}
-        event={dateEventMap.get(dateStr)}
+        events={dateEventMap.get(dateStr) ?? []}
         isSelected={selectedDates.has(dateStr)}
         onMouseDown={onMouseDown}
         onMouseEnter={onMouseEnter}
