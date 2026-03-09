@@ -46,7 +46,7 @@ export function EventList({ events, removeEvent }: Props) {
 								: 'bg-blue-100 text-blue-800'
 							}`}
 					>
-						{event.title}: {event.startDate} to {event.endDate}
+						{event.title}: {event.startDate === event.endDate ? event.startDate : `${event.startDate} to ${event.endDate}`}
 						{event.type !== 'public' && event.type !== 'school' && (
 							<button
 								onClick={() => removeEvent(event.id)}
