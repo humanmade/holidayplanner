@@ -84,6 +84,7 @@ async function fetchOpenHolidays(
     endDate: h.endDate,
     title: getEnglishName(h.name, 'Public Holiday'),
     type: 'public' as const,
+    source: 'openholidays' as const,
   }));
 
   if (subdivisionCode) {
@@ -98,6 +99,7 @@ async function fetchOpenHolidays(
             endDate: h.endDate,
             title: getEnglishName(h.name, 'School Holiday'),
             type: 'school' as const,
+            source: 'openholidays' as const,
           });
         }
       }
@@ -138,6 +140,7 @@ async function fetchGovUkHolidays(
       endDate: e.date,
       title: e.title,
       type: 'public' as const,
+      source: 'govuk' as const,
     }));
 }
 
@@ -178,6 +181,7 @@ async function fetchNagerHolidays(
       endDate: h.date,
       title: h.name,
       type: isSchool ? 'school' : 'public',
+      source: 'nager' as const,
     });
   }
 

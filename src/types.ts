@@ -6,6 +6,7 @@ export interface CalendarEvent {
   endDate: string;   // YYYY-MM-DD
   title: string;
   type: EventType;
+  source?: HolidaySource; // which API provided this event
 }
 
 export type HolidaySource = '' | 'openholidays' | 'nager' | 'govuk';
