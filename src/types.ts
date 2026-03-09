@@ -8,7 +8,7 @@ export interface CalendarEvent {
   type: EventType;
 }
 
-export type HolidaySource = '' | 'openholidays' | 'nager';
+export type HolidaySource = '' | 'openholidays' | 'nager' | 'govuk';
 
 export interface AppSettings {
   totalDays: number;      // default 35

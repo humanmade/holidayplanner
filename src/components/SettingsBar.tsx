@@ -5,6 +5,12 @@ import { getMonthName } from '../utils/dates';
 const OPEN_HOLIDAYS_BASE = 'https://openholidaysapi.org';
 const NAGER_BASE = 'https://date.nager.at/api/v3';
 
+const UK_SUBDIVISIONS = [
+  { code: 'england-and-wales', name: 'England & Wales' },
+  { code: 'northern-ireland', name: 'Northern Ireland' },
+  { code: 'scotland', name: 'Scotland' },
+];
+
 interface ApiName {
   language: string;
   text: string;
@@ -20,7 +26,7 @@ interface NagerCountry {
   name: string;
 }
 
-interface Subdivision {
+interface OpenHolidaysSubdivision {
   code: string;
   name: ApiName[];
 }
@@ -54,14 +60,14 @@ export function SettingsBar({ settings, onUpdate }: SettingsBarProps) {
     const openHolidaysPromise = fetch(`${OPEN_HOLIDAYS_BASE}/Countries`)
       .then((res) => res.json())
       .then((data: OpenHolidaysCountry[]) =>
-        data.map((c) => ({ code: c.isoCode, name: getEnglishName(c.name), source: 'openholidays' as const }))
+        data.map((c): CountryEntry => ({ code: c.isoCode, name: getEnglishName(c.name), source: 'openholidays' }))
       )
       .catch(() => [] as CountryEntry[]);
 
     const nagerPromise = fetch(`${NAGER_BASE}/AvailableCountries`)
       .then((res) => res.json())
       .then((data: NagerCountry[]) =>
-        data.map((c) => ({ code: c.countryCode, name: c.name, source: 'nager' as const }))
+        data.map((c): CountryEntry => ({ code: c.countryCode, name: c.name, source: 'nager' }))
       )
       .catch(() => [] as CountryEntry[]);
 
@@ -71,9 +77,10 @@ export function SettingsBar({ settings, onUpdate }: SettingsBarProps) {
 
         // OpenHolidays takes priority — only add Nager countries not already covered
         const openCodes = new Set(openCountries.map((c) => c.code));
-        const merged = [
+        const merged: CountryEntry[] = [
           ...openCountries,
-          ...nagerCountries.filter((c) => !openCodes.has(c.code)),
+          ...nagerCountries.filter((c) => !openCodes.has(c.code) && c.code !== 'GB'),
+          { code: 'GB', name: 'United Kingdom', source: 'govuk' },
         ];
         merged.sort((a, b) => a.name.localeCompare(b.name));
         setCountries(merged);
@@ -85,18 +92,27 @@ export function SettingsBar({ settings, onUpdate }: SettingsBarProps) {
     return () => { cancelled = true; };
   }, []);
 
-  // Fetch subdivisions when country changes (OpenHolidays only)
+  // Fetch subdivisions when country changes
   useEffect(() => {
     setSubdivisions([]);
 
-    if (!settings.countryCode || settings.countrySource !== 'openholidays') return;
+    if (!settings.countryCode) return;
+
+    // Gov.uk: use static UK divisions
+    if (settings.countrySource === 'govuk') {
+      setSubdivisions(UK_SUBDIVISIONS);
+      return;
+    }
+
+    // OpenHolidays: fetch from API
+    if (settings.countrySource !== 'openholidays') return;
 
     let cancelled = false;
     setLoadingSubdivisions(true);
 
     fetch(`${OPEN_HOLIDAYS_BASE}/Subdivisions?countryIsoCode=${settings.countryCode}`)
       .then((res) => res.json())
-      .then((data: Subdivision[]) => {
+      .then((data: OpenHolidaysSubdivision[]) => {
         if (cancelled) return;
         const sorted = data
           .map((s) => ({ code: s.code, name: getEnglishName(s.name) }))
@@ -114,11 +130,15 @@ export function SettingsBar({ settings, onUpdate }: SettingsBarProps) {
   }, [settings.countryCode, settings.countrySource]);
 
   const handleCountryChange = (code: string) => {
-    const country = countries.find((c) => c.code === code);
+    if (!code) {
+      onUpdate({ countryCode: '', subdivisionCode: '', countrySource: '' });
+      return;
+    }
+    const entry = countries.find((c) => c.code === code);
     onUpdate({
       countryCode: code,
       subdivisionCode: '',
-      countrySource: country?.source ?? '',
+      countrySource: entry?.source ?? '',
     });
   };
 

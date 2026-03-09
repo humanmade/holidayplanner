@@ -109,6 +109,38 @@ async function fetchOpenHolidays(
   return holidays;
 }
 
+interface GovUkResponse {
+  [division: string]: {
+    division: string;
+    events: { title: string; date: string; notes: string; bunting: boolean }[];
+  };
+}
+
+async function fetchGovUkHolidays(
+  subdivisionCode: string,
+  year: number,
+  yearStartMonth: number,
+): Promise<CalendarEvent[]> {
+  const { validFrom, validTo } = computeDateRange(year, yearStartMonth);
+
+  const res = await fetch('https://www.gov.uk/bank-holidays.json');
+  if (!res.ok) throw new Error(`Gov.uk API error: ${res.status}`);
+  const data: GovUkResponse = await res.json();
+
+  const division = data[subdivisionCode];
+  if (!division) return [];
+
+  return division.events
+    .filter((e) => e.date >= validFrom && e.date <= validTo)
+    .map((e) => ({
+      id: `govuk-${subdivisionCode}-${e.date}`,
+      startDate: e.date,
+      endDate: e.date,
+      title: e.title,
+      type: 'public' as const,
+    }));
+}
+
 async function fetchNagerHolidays(
   countryCode: string,
   subdivisionCode: string,
@@ -186,9 +218,14 @@ export function usePublicHolidays(
       setError(null);
 
       try {
-        const holidays = countrySource === 'openholidays'
-          ? await fetchOpenHolidays(countryCode, subdivisionCode, year, yearStartMonth)
-          : await fetchNagerHolidays(countryCode, subdivisionCode, year, yearStartMonth);
+        let holidays: CalendarEvent[];
+        if (countrySource === 'openholidays') {
+          holidays = await fetchOpenHolidays(countryCode, subdivisionCode, year, yearStartMonth);
+        } else if (countrySource === 'govuk') {
+          holidays = await fetchGovUkHolidays(subdivisionCode, year, yearStartMonth);
+        } else {
+          holidays = await fetchNagerHolidays(countryCode, subdivisionCode, year, yearStartMonth);
+        }
 
         if (cancelled) return;
 
